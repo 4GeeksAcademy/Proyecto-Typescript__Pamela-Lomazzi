@@ -1,3 +1,7 @@
+if (typeof document !== "undefined") {
+  void import("./style.css");
+}
+
 type SeatState = 0 | 1;
 type CinemaRoom = SeatState[][];
 
@@ -28,17 +32,24 @@ function initializeRoom(rows: number = TOTAL_ROWS, columns: number = TOTAL_COLUM
 }
 
 function printRoom(room: CinemaRoom): void {
-  const header = `    ${Array.from({ length: room[0].length }, (_, col) => col.toString().padStart(2, " ")).join(" ")}`;
+  const roomLines = buildRoomLines(room);
 
   console.log("\nEstado actual de la sala:");
-  console.log(header);
+  roomLines.forEach((line) => console.log(line));
+
+  console.log("");
+}
+
+function buildRoomLines(room: CinemaRoom): string[] {
+  const header = `    ${Array.from({ length: room[0].length }, (_, col) => col.toString().padStart(2, " ")).join(" ")}`;
+  const lines = [header];
 
   room.forEach((row, rowIndex) => {
     const visualRow = row.map((seat) => (seat === 1 ? " X" : " L")).join(" ");
-    console.log(`${rowIndex.toString().padStart(2, " ")} |${visualRow}`);
+    lines.push(`${rowIndex.toString().padStart(2, " ")} |${visualRow}`);
   });
 
-  console.log("");
+  return lines;
 }
 
 function reserveSeat(room: CinemaRoom, row: number, column: number): ReservationResult {
@@ -109,33 +120,61 @@ function printSeatCounters(counters: SeatCounters): void {
   console.log(`Asientos disponibles: ${counters.available}`);
 }
 
+function renderDemoOutput(lines: string[]): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const app = document.querySelector<HTMLParagraphElement>("#app");
+  if (!app) {
+    return;
+  }
+
+  app.className = "mt-2 text-sm text-slate-700 whitespace-pre-wrap font-mono";
+  app.textContent = lines.join("\n");
+}
+
 function runDemo(): void {
   const room = initializeRoom();
+  const demoLines: string[] = [];
 
-  console.log("=== DEMO: Sistema de Reservas de Cine ===");
+  const logLine = (message: string): void => {
+    console.log(message);
+    demoLines.push(message);
+  };
+
+  logLine("=== DEMO: Sistema de Reservas de Cine ===");
+  demoLines.push("\nEstado inicial de la sala:");
+  demoLines.push(...buildRoomLines(room));
   printRoom(room);
 
   // Reservas exitosas
-  console.log(reserveSeat(room, 2, 4).message);
-  console.log(reserveSeat(room, 2, 5).message);
+  logLine(reserveSeat(room, 2, 4).message);
+  logLine(reserveSeat(room, 2, 5).message);
 
   // Reserva fallida (asiento ya ocupado)
-  console.log(reserveSeat(room, 2, 4).message);
+  logLine(reserveSeat(room, 2, 4).message);
 
   // Reserva fallida (fuera de rango)
-  console.log(reserveSeat(room, 8, 0).message);
+  logLine(reserveSeat(room, 8, 0).message);
 
+  demoLines.push("\nEstado de la sala despues de reservas:");
+  demoLines.push(...buildRoomLines(room));
   printRoom(room);
 
   const counters = countSeats(room);
   printSeatCounters(counters);
+  demoLines.push(`Asientos ocupados: ${counters.occupied}`);
+  demoLines.push(`Asientos disponibles: ${counters.available}`);
 
   const contiguousPair = findFirstContiguousFreePair(room);
   if (typeof contiguousPair === "string") {
-    console.log(contiguousPair);
+    logLine(contiguousPair);
   } else {
-    console.log(contiguousPair.message);
+    logLine(contiguousPair.message);
   }
+
+  renderDemoOutput(demoLines);
 }
 
 runDemo();
